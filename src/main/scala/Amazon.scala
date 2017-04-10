@@ -75,7 +75,7 @@ object Amazon {
       .toDF() // Convert to DataFrame to perform aggregation / sorting
       .groupBy($"value") // Count number of occurences of each word
       .agg(count("*") as "numOccurances")
-      .orderBy($"numOccurances" desc).show(1000) // Show most common words first
+      .orderBy($"numOccurancies" desc).show(1000) // Show most common words first
 
     val z: RDD[Review] = review.rdd
       z.map((r: Review) => makeRequest(r, z.getNumPartitions)).count()
