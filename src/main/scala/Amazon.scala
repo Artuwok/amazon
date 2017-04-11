@@ -5,6 +5,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -13,8 +14,19 @@ case class Review(Id: String, ProductId: String, UserId: String, ProfileName: St
 
 object Amazon {
 
+
+  def process (r: Review, num: Int): IndexedSeq [Future[Review]]  = {
+    // define the tasks
+    val tasks = for (i <- 1 to 100) yield Future {
+      // do something more fancy here
+      makeRequest(r)
+    }
+    tasks
+  }
+  
+
   val rest = "https://api.google.com/translate"
-  def makeRequest(r: Review, num: Int): Review = {
+  def makeRequest(r: Review): Review = {
     val  inputLang = "en"
     val outputLang = "fr"
     val svc = url(rest).POST
@@ -73,12 +85,12 @@ object Amazon {
       .toLowerCase
       .split("\\W+"))
       .toDF() // Convert to DataFrame to perform aggregation / sorting
-      .groupBy($"value") // Count number of occurences of each word
+      .groupBy($"value") // Count number of occurrences of each word
       .agg(count("*") as "numOccurances")
       .orderBy($"numOccurancies" desc).show(1000) // Show most common words first
 
     val z: RDD[Review] = review.rdd
-      z.map((r: Review) => makeRequest(r, z.getNumPartitions)).count()
+      z.map((r: Review) =>  Future.sequence(process(r, z.getNumPartitions))).count()
     print(z.getNumPartitions)
     spark.stop()
 
